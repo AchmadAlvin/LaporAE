@@ -2,67 +2,39 @@
 
 namespace App\Providers;
 
-use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\ServiceProvider;
-use Throwable;
 
 class AppServiceProvider extends ServiceProvider
 {
-    /**
-     * Register any application services.
-     */
-    public function register(): void
-    {
-        //
-    }
-
-    /**
-     * Bootstrap any application services.
-     */
     public function boot(): void
     {
-        $this->ensureDatabaseExists();
+
+        if (app()->runningInConsole()) {
+            $this->createDatabaseIfNotExists();
+        }
+        Schema::defaultStringLength(191);
     }
 
-    protected function ensureDatabaseExists(): void
+    protected function createDatabaseIfNotExists(): void
     {
+        $config = config('database.connections.mysql');
+        $database = $config['database'] ?? null;
+
+        if (! $database) {
+            return;
+        }
+
         try {
-            $defaultConnection = config('database.default');
-            if (! $defaultConnection) {
-                return;
-            }
-
-            $connectionConfig = config("database.connections.{$defaultConnection}");
-            if (! $connectionConfig || ($connectionConfig['driver'] ?? null) !== 'mysql') {
-                return;
-            }
-
-            $database = $connectionConfig['database'] ?? null;
-            if (! $database) {
-                return;
-            }
-
-            $charset = $connectionConfig['charset'] ?? 'utf8mb4';
-            $collation = $connectionConfig['collation'] ?? 'utf8mb4_unicode_ci';
-            $temporaryConnectionName = "{$defaultConnection}_without_db";
-
-            Config::set(
-                "database.connections.{$temporaryConnectionName}",
-                array_merge($connectionConfig, ['database' => null])
+            $pdo = new \PDO(
+                "mysql:host={$config['host']};port={$config['port']}",
+                $config['username'],
+                $config['password']
             );
 
-            $statement = sprintf(
-                'CREATE DATABASE IF NOT EXISTS `%s` CHARACTER SET %s COLLATE %s',
-                str_replace('`', '``', $database),
-                $charset,
-                $collation
-            );
-
-            DB::connection($temporaryConnectionName)->statement($statement);
-            DB::purge($temporaryConnectionName);
-            DB::purge($defaultConnection);
-        } catch (Throwable $e) {
+            $pdo->exec("CREATE DATABASE IF NOT EXISTS `$database` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci");
+        } catch (\Throwable $e) {
             report($e);
         }
     }
