@@ -13,13 +13,14 @@ return new class extends Migration
     {
         Schema::create('laporans', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('user_id')->constrained()->onDelete('cascade');
-            $table->string('title');
-            $table->string('location');
-            $table->enum('category', ['Aksesibilitas', 'Keamanan', 'Fasilitas Rusak']);
-            $table->text('description');
-            $table->string('photo')->nullable(); // <-- Kolom photo ada di sini
-            $table->enum('status', ['Baru', 'Diproses', 'Selesai'])->default('Baru'); // <-- Kolom status di sini
+            $table->string('judul');
+            $table->text('deskripsi');
+            $table->string('kategori');
+            $table->string('lokasi');
+            $table->string('foto');
+            $table->enum('status', ['Baru Masuk', 'Sedang Diverifikasi', 'Selesai Ditindaklanjuti'])->default('Baru Masuk');
+            $table->unsignedBigInteger('pelapor_id')->nullable();
+            $table->foreign('pelapor_id')->references('id')->on('users')->nullOnDelete();
             $table->timestamps();
         });
     }

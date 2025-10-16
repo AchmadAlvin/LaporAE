@@ -14,28 +14,31 @@ class LaporanSeeder extends Seeder
     public function run(): void
     {
         Laporan::create([
-            'user_id' => 2,
-            'title' => 'Trotoar Rusak dan Berlubang',
-            'location' => 'Depan Stasiun Madiun, Jl Pahlawan',
-            'category' => 'Fasilitas Rusak',
-            'description' => 'Trotoar di depan stasiun rusak parah, sulit dilewati pejalan kaki dan berbahaya bagi pengguna kursi roda.',
-            'status' => 'Baru',
+            'pelapor_id' => 2,
+            'judul' => 'Trotoar Rusak dan Berlubang',
+            'deskripsi' => 'Trotoar di depan stasiun rusak parah, sulit dilewati pejalan kaki dan berbahaya bagi pengguna kursi roda.',
+            'kategori' => 'Fasilitas Rusak',
+            'lokasi' => 'Depan Stasiun Madiun, Jl Pahlawan',
+            'foto' => 'laporan1.jpg',
+            'status' => 'Baru Masuk',
         ]);
         Laporan::create([
-            'user_id' => 3,
-            'title' => 'Halte Bus Tidak Ada Ramp',
-            'location' => 'Halte Pasar Besar, Jl Sudirman',
-            'category' => 'Aksesibilitas',
-            'description' => 'Halte Bus di Pasar Besar tidak ada jalan landai (ramp) untuk naik turun kursi roda, Sangat menyulitkan.',
-            'status' => 'Diproses',
+            'pelapor_id' => 3,
+            'judul' => 'Halte Bus Tidak Ada Ramp',
+            'deskripsi' => 'Halte Bus di Pasar Besar tidak ada jalan landai (ramp) untuk naik turun kursi roda, sangat menyulitkan.',
+            'kategori' => 'Aksesibilitas',
+            'lokasi' => 'Halte Pasar Besar, Jl Sudirman',
+            'foto' => 'laporan2.jpg',
+            'status' => 'Sedang Diverifikasi',
         ]);
         Laporan::create([
-            'user_id' => 2,
-            'title' => 'Lampu Jalan Mati',
-            'location' => 'Sekitar Terminal Purboyo',
-            'category' => 'Keamanan',
-            'description' => 'Lampu jalan di sekitar Terminal Purboyo banyak yang mati, membuat suasana menjadi gelap dan rawan di malam hari',
-            'status' => 'Selesai'
+            'pelapor_id' => 2,
+            'judul' => 'Lampu Jalan Mati',
+            'deskripsi' => 'Lampu jalan di sekitar Terminal Purboyo banyak yang mati, membuat suasana menjadi gelap dan rawan di malam hari.',
+            'kategori' => 'Keamanan',
+            'lokasi' => 'Sekitar Terminal Purboyo',
+            'foto' => 'laporan3.jpg',
+            'status' => 'Selesai Ditindaklanjuti'
         ]);
     }
 }
