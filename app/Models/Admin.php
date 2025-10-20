@@ -9,9 +9,15 @@ class Admin extends Model
 {
     use HasFactory;
 
+    protected $table = 'admins';
+
     protected $fillable = [
-        'nama',
+        'user_id',
+        'name',
         'email',
         'password',
+        // tambahkan kolom lain jika tabel admins Anda punya kolom tambahan
     ];
+
+    public $timestamps = true;
 }
