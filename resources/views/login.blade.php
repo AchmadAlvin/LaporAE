@@ -40,8 +40,14 @@
             justify-content: center;
             text-align: center;
         }
-        .left-section img { max-width: 260px; height: auto; display: block; margin-bottom: 20px; }
-        .left-section h2 { margin: 0; font-size: 28px; font-weight: 700; margin-top: 20px; }
+        .left-section img { max-width: 120px; height: auto; display: block; margin-bottom: 20px; }
+        .left-section h2 {
+            margin: 0;
+            font-size: 28px;
+            font-weight: 700;
+            margin-top: 1px;
+            color: #fff; /* <-- INI PERUBAHANNYA */
+        }
         .left-section p { margin: 0; color: rgba(255, 255, 255, 0.9); max-width: 400px; }
         .link-light { color: #fff; text-decoration: none; font-weight: 600; }
         .link-light:hover { text-decoration: underline; }
@@ -50,7 +56,8 @@
         /* Gaya Bagian Kanan (Form) */
         .right-section { padding: 48px; background: #fff; color: var(--text-color); display: flex; flex-direction: column; align-items: center; justify-content: center; } /* Background putih */
         .form-wrapper { width: 100%; max-width: 420px; } /* max-width disamakan */
-        h2 { text-align: left; margin-bottom: 24px; color: var(--text-color); font-size: 24px; font-weight: 700; } /* Warna teks biasa */
+        /* Target H2 di bagian kanan secara spesifik */
+        .right-section h2 { text-align: left; margin-bottom: 24px; color: var(--text-color); font-size: 24px; font-weight: 700; } /* Warna teks biasa */
         .form-group { margin-bottom: 16px; }
         .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border-width: 0; }
         label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 6px; } /* Label ditampilkan */
@@ -77,11 +84,10 @@
     </style>
 </head>
 <body>
-    {{-- Menggunakan class container-panel --}}
     <div class="container-panel" role="main">
         <section class="left-section">
              {{-- Pastikan path gambar benar --}}
-             <h1>LaporAE</h3>
+             <img src="{{ asset('images/Group.png') }}" alt="Ilustrasi Login">
              <h2>Selamat Datang Kembali!</h2>
              <p>Masuk untuk melaporkan, memantau status, dan berinteraksi dengan tim. Data Anda aman.</p>
              <div style="margin-top:12px">
@@ -89,10 +95,9 @@
              </div>
         </section>
 
-        {{-- Menggunakan class right-section --}}
         <section class="right-section" aria-labelledby="login-heading">
-             {{-- Menggunakan class form-wrapper --}}
              <div class="form-wrapper">
+                 {{-- Gunakan h2 untuk judul form --}}
                  <h2 id="login-heading">Masuk Akun</h2>
 
                  @if (session('status'))
@@ -115,13 +120,13 @@
                     @csrf
 
                     <div class="form-group">
-                        <label for="email">Alamat Email</label> {{-- Label ditampilkan --}}
+                        <label for="email">Alamat Email</label>
                         <input id="email" name="email" type="email" class="form-input" value="{{ old('email') }}" placeholder="Your e-mail" required autofocus>
                         @error('email') <div class="field-error">{{ $message }}</div> @enderror
                     </div>
 
                     <div class="form-group">
-                        <label for="password">Kata Sandi</label> {{-- Label ditampilkan --}}
+                        <label for="password">Kata Sandi</label>
                         <input id="password" name="password" type="password" class="form-input" placeholder="Password" required>
                         @error('password') <div class="field-error">{{ $message }}</div> @enderror
                     </div>

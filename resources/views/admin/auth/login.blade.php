@@ -22,7 +22,12 @@
         * { box-sizing: border-box; font-family: 'Inter', system-ui, sans-serif; }
         body { margin: 0; min-height: 100vh; background: var(--bg-light); display: flex; align-items: center; justify-content: center; padding: 24px; color: var(--text-color); }
         .form-container { width: 100%; max-width: 450px; background: #fff; padding: 40px; border-radius: 12px; box-shadow: 0 10px 30px rgba(2, 6, 23, 0.08); }
-        h2 { text-align: center; margin-bottom: 24px; color: var(--text-color); font-size: 24px; font-weight: 700; }
+        .left-section h2 {
+            margin: 0;
+            font-size: 28px;
+            font-weight: 700;
+            margin-top: 1px; /* Anda punya margin-top: 1px di sini */
+        }
         .form-group { margin-bottom: 16px; }
         label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 6px; }
         .form-input { width: 100%; padding: 12px 16px; border-radius: 10px; border: 1px solid var(--border-color); background: var(--input-bg); color: var(--text-color); font-size: 15px; }
