@@ -3,130 +3,147 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
-use Illuminate\Http\RedirectResponse;
+use App\Models\Admin;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\View\View;
+use Illuminate\Support\Facades\DB;
 
 class UserController extends Controller
 {
-    public function registerForm(): View
+    public function registerForm()
     {
-        $captcha = $this->generateCaptcha('user_register');
-
-        return view('auth.register', [
-            'captchaQuestion' => $captcha['question'],
-        ]);
+        return view('auth.register');
     }
 
-    public function registerProcess(Request $request): RedirectResponse
+    public function registerProcess(Request $request)
+    {
+        $data = $request->validate([
+            'name' => 'required|string|max:255',
+            'email' => 'required|string|email|max:255|unique:users',
+            'password' => 'required|string|min:8|confirmed',
+            'is_admin' => 'sometimes|accepted',
+        ]);
+
+        DB::beginTransaction();
+        try {
+            $user = User::create([
+                'name' => $data['name'],
+                'email' => $data['email'],
+                'password' => Hash::make($data['password']),
+            ]);
+
+            if (! empty($data['is_admin'])) {
+                Admin::create([
+                    'user_id' => $user->id,
+                    'name'    => $user->name,
+                    'email'   => $user->email,
+                    'password'=> $user->password,
+                ]);
+            }
+
+            DB::commit();
+
+            session(['user' => $user->id]);
+            return redirect()->route('dashboard');
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            return back()->withInput()->withErrors(['register' => 'Gagal mendaftar: '.$e->getMessage()]);
+        }
+    }
+
+    public function loginForm()
+    {
+        return view('login');
+    }
+
+    public function loginProcess(Request $request)
     {
         $request->validate([
-            'nama_lengkap' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'email', 'max:255', 'unique:users,email'],
-            'password' => ['required', 'string', 'min:8', 'confirmed'],
-            'captcha_answer' => ['required', 'numeric'],
+            'email' => 'required|email',
+            'password' => 'required|string',
+            'captcha' => 'accepted',
+        ], [
+            'captcha.accepted' => 'Tandai captcha "I am not a robot".'
         ]);
 
-        if (! $this->validateCaptcha('user_register', (int) $request->input('captcha_answer'))) {
-            return back()->withInput()->withErrors(['captcha_answer' => 'Jawaban captcha salah.']);
+        $cred = $request->only('email', 'password');
+
+        $user = User::where('email', $cred['email'])->first();
+        if (! $user) {
+            return back()->withErrors(['email' => 'Email atau password salah'])->withInput();
         }
 
-        $user = User::create([
-            'nama_lengkap' => $request->input('nama_lengkap'),
-            'email' => $request->input('email'),
-            'password' => Hash::make($request->input('password')),
-        ]);
+        $stored = $user->password;
+        $passwordOk = false;
 
-        session(['user' => [
-            'id' => $user->id,
-            'nama_lengkap' => $user->nama_lengkap,
-            'email' => $user->email,
-        ]]);
+        // Attempt standard bcrypt check (may throw if stored not bcrypt)
+        try {
+            $passwordOk = \Illuminate\Support\Facades\Hash::check($cred['password'], $stored);
+        } catch (\RuntimeException $e) {
+            // Not bcrypt => try legacy checks
+            $plain = $cred['password'];
 
-        return redirect()->route('dashboard')->with('status', 'Registrasi berhasil.');
-    }
+            // md5
+            if (! $passwordOk && is_string($stored) && strlen($stored) === 32 && md5($plain) === $stored) {
+                $passwordOk = true;
+            }
 
-    public function loginForm(): View
-    {
-        $captcha = $this->generateCaptcha('user_login');
+            // sha1
+            if (! $passwordOk && is_string($stored) && strlen($stored) === 40 && sha1($plain) === $stored) {
+                $passwordOk = true;
+            }
 
-        return view('auth.login', [
-            'captchaQuestion' => $captcha['question'],
-        ]);
-    }
-
-    public function loginProcess(Request $request): RedirectResponse
-    {
-        $request->validate([
-            'email' => ['required', 'email'],
-            'password' => ['required', 'string'],
-            'captcha_answer' => ['required', 'numeric'],
-        ]);
-
-        if (! $this->validateCaptcha('user_login', (int) $request->input('captcha_answer'))) {
-            return back()->withInput()->withErrors(['captcha_answer' => 'Jawaban captcha salah.']);
+            // plain text (fallback)
+            if (! $passwordOk && $plain === $stored) {
+                $passwordOk = true;
+            }
         }
 
-        $user = User::where('email', $request->input('email'))->first();
-
-        if (! $user || ! Hash::check($request->input('password'), $user->password)) {
-            return back()->withInput()->withErrors(['email' => 'Kredensial tidak valid.']);
+        if (! $passwordOk) {
+            return back()->withErrors(['email' => 'Email atau password salah'])->withInput();
         }
 
-        session(['user' => [
-            'id' => $user->id,
-            'nama_lengkap' => $user->nama_lengkap,
-            'email' => $user->email,
-        ]]);
-
-        session()->forget('admin');
-
-        return redirect()->route('dashboard')->with('status', 'Login berhasil.');
-    }
-
-    public function dashboard(): View|RedirectResponse
-    {
-        if ($redirect = $this->ensureUserAuthenticated()) {
-            return $redirect;
+        // If the stored password is not bcrypt or needs rehash, rehash and save
+        try {
+            if (! \Illuminate\Support\Facades\Hash::needsRehash($stored)) {
+                // needsRehash returns false if algorithm matches current; if stored wasn't bcrypt, earlier check would have thrown.
+                // But handle case where stored was legacy: rehash if it doesn't look like bcrypt.
+                if (! is_string($stored) || strpos($stored, '$2y$') !== 0) {
+                    $user->password = \Illuminate\Support\Facades\Hash::make($cred['password']);
+                    $user->save();
+                }
+            } else {
+                // stored uses bcrypt but flagged for rehash (older cost) -> rehash
+                $user->password = \Illuminate\Support\Facades\Hash::make($cred['password']);
+                $user->save();
+            }
+        } catch (\Throwable $e) {
+            // ignore rehash/save errors, proceed to login
         }
 
-        return app(LaporanController::class)->index();
+        session(['user' => $user->id]);
+        return redirect()->intended(route('dashboard'));
     }
 
-    public function logout(): RedirectResponse
+    public function dashboard()
     {
-        session()->forget(['user', 'admin']);
-
-        return redirect()->route('login.form')->with('status', 'Anda telah logout.');
-    }
-
-    protected function ensureUserAuthenticated(): ?RedirectResponse
-    {
-        if (! session()->has('user')) {
-            return redirect()->route('login.form')->with('error', 'Silakan login terlebih dahulu.');
+        $user = null;
+        if (session()->has('user')) {
+            $user = User::find(session('user'));
         }
 
-        return null;
+        // ambil semua laporan (atau hanya milik user jika ingin)
+        $laporans = collect();
+        if ($user) {
+            $laporans = DB::table('laporans')->orderBy('created_at', 'desc')->get();
+        }
+
+        return view('dashboard', ['user' => $user, 'laporans' => $laporans]);
     }
 
-    protected function generateCaptcha(string $key): array
+    public function logout()
     {
-        $first = random_int(1, 9);
-        $second = random_int(1, 9);
-
-        session(["captcha_{$key}" => $first + $second]);
-
-        return [
-            'question' => "{$first} + {$second} = ?",
-        ];
-    }
-
-    protected function validateCaptcha(string $key, int $answer): bool
-    {
-        $expected = session("captcha_{$key}");
-        session()->forget("captcha_{$key}");
-
-        return $expected !== null && $expected === $answer;
+        session()->forget('user');
+        return redirect()->route('login.form');
     }
 }
