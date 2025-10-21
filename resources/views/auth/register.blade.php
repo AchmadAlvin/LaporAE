@@ -38,16 +38,17 @@
           <input class="form-input" type="email" name="email" placeholder="Your e-mail" value="{{ old('email') }}" required>
           @error('email') <div class="field-error">{{ $message }}</div> @enderror
 
-          <input class="form-input" type="password" name="password" placeholder="Create password" required>
+          <input class="form-input" type="password" name="password" placeholder="Create password" required minlength="1" aria-describedby="passwordHelp">
           @error('password') <div class="field-error">{{ $message }}</div> @enderror
+          <div id="passwordHelp" style="font-size:13px;color:#6b7280;margin-bottom:8px">Minimal 1 karakter.</div>
 
-          <input class="form-input" type="password" name="password_confirmation" placeholder="Confirm password" required>
+          <input class="form-input" type="password" name="password_confirmation" placeholder="Confirm password" required minlength="1">
 
           <label class="admin-check"><input type="checkbox" name="is_admin" value="1"> Register as admin</label>
 
           <div class="actions">
             <button class="btn btn-yellow" type="submit">Create account</button>
-            <button type="button" class="btn btn-outline-light" onclick="location.href='{{ route('login.form') }}'">Sign in</button>
+            <a class="btn btn-outline-light" href="{{ route('login.form') }}">Sign in</a>
           </div>
 
           <p class="muted-center">Or <a class="link-plain" href="{{ route('login.form') }}">Sign in</a></p>

@@ -19,8 +19,10 @@ Route::get('/', function () {
 
 Route::get('/register', [UserController::class, 'registerForm'])->name('register.form');
 Route::post('/register', [UserController::class, 'registerProcess'])->name('register.process');
+
 Route::get('/login', [UserController::class, 'loginForm'])->name('login.form');
 Route::post('/login', [UserController::class, 'loginProcess'])->name('login.process');
+
 Route::get('/dashboard', [UserController::class, 'dashboard'])->name('dashboard');
 Route::get('/lapor', [LaporanController::class, 'create'])->name('lapor.create');
 Route::post('/lapor', [LaporanController::class, 'store'])->name('lapor.store');
