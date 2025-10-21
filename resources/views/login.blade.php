@@ -93,7 +93,7 @@
 <body>
   <div class="panel">
     <section class="left">
-      <img src="https://cdn.pixabay.com/photo/2017/08/10/07/03/people-2618263_1280.png" alt="Illustration">
+      <img src="" alt="Illustration">
       <h2>Selamat Datang Kembali!</h2>
       <p>Masuk untuk melaporkan, memantau status, dan berinteraksi dengan tim. Data Anda aman.</p>
       <a class="text-white fw-bold" href="{{ route('register.form') }}">Belum punya akun? Daftar</a>

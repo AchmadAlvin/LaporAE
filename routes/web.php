@@ -34,3 +34,5 @@ Route::get('/admin', [AdminController::class, 'index'])->name('admin.dashboard')
 Route::get('/admin/laporan/{id}/edit', [AdminController::class, 'edit'])->name('admin.laporan.edit');
 Route::put('/admin/laporan/{id}', [AdminController::class, 'update'])->name('admin.laporan.update');
 Route::delete('/admin/laporan/{id}', [AdminController::class, 'destroy'])->name('admin.laporan.destroy');
+Route::post('/admin/logout', [AdminController::class, 'logout'])->name('admin.logout');
+
