@@ -114,4 +114,10 @@ class AdminController extends Controller
 
         return $expected !== null && $expected === $answer;
     }
+    public function logout(): RedirectResponse // Tambahkan fungsi ini
+    {
+        session()->forget('admin'); // Hapus data sesi admin
+        session()->flash('status', 'Logout admin berhasil.'); // Pesan opsional
+        return redirect()->route('admin.login.form'); // Redirect ke halaman login admin
+    }
 }
