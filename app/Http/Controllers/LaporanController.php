@@ -5,6 +5,9 @@ namespace App\Http\Controllers;
 use App\Models\Laporan;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Illuminate\View\View;
 
 class LaporanController extends Controller
@@ -26,7 +29,6 @@ class LaporanController extends Controller
 
         return view('laporan.create', [
             'user' => session('user'),
-            'captchaQuestion' => $this->generateCaptcha('laporan_create')['question'],
         ]);
     }
 
@@ -42,18 +44,11 @@ class LaporanController extends Controller
             'kategori' => ['required', 'string', 'max:255'],
             'lokasi' => ['required', 'string', 'max:255'],
             'foto' => ['required', 'image', 'max:2048'],
-            'captcha_answer' => ['required', 'numeric'],
         ]);
-
-        if (! $this->validateCaptcha('laporan_create', (int) $request->input('captcha_answer'))) {
-            return back()
-                ->withInput()
-                ->withErrors(['captcha_answer' => 'Jawaban captcha tidak sesuai.']);
-        }
 
         $user = session('user');
 
-        $fotoPath = $request->file('foto')->store('laporans', 'public');
+        $fotoPath = $this->storeFoto($request->file('foto'));
 
         Laporan::create([
             'judul' => $validated['judul'],
@@ -125,9 +120,66 @@ class LaporanController extends Controller
         }
 
         $laporan = Laporan::findOrFail($id);
+        $this->deleteFoto($laporan->foto);
         $laporan->delete();
 
         return redirect()->route('admin.dashboard')->with('status', 'Laporan berhasil dihapus.');
+    }
+
+    public function editUser(int $id): View|RedirectResponse
+    {
+        if ($redirect = $this->ensureUserAuthenticated()) {
+            return $redirect;
+        }
+
+        $laporan = Laporan::findOrFail($id);
+        $this->authorizeUserOwnership($laporan);
+
+        return view('laporan.edit', [
+            'laporan' => $laporan,
+        ]);
+    }
+
+    public function updateUser(Request $request, int $id): RedirectResponse
+    {
+        if ($redirect = $this->ensureUserAuthenticated()) {
+            return $redirect;
+        }
+
+        $laporan = Laporan::findOrFail($id);
+        $this->authorizeUserOwnership($laporan);
+
+        $validated = $request->validate([
+            'judul' => ['required', 'string', 'max:255'],
+            'deskripsi' => ['required', 'string'],
+            'kategori' => ['required', 'string', 'max:255'],
+            'lokasi' => ['required', 'string', 'max:255'],
+            'foto' => ['nullable', 'image', 'max:2048'],
+        ]);
+
+        if ($request->hasFile('foto')) {
+            $this->deleteFoto($laporan->foto);
+            $validated['foto'] = $this->storeFoto($request->file('foto'));
+        }
+
+        $laporan->update($validated);
+
+        return redirect()->route('laporan.show', $laporan->id)->with('status', 'Laporan berhasil diperbarui.');
+    }
+
+    public function destroyUser(int $id): RedirectResponse
+    {
+        if ($redirect = $this->ensureUserAuthenticated()) {
+            return $redirect;
+        }
+
+        $laporan = Laporan::findOrFail($id);
+        $this->authorizeUserOwnership($laporan);
+
+        $this->deleteFoto($laporan->foto);
+        $laporan->delete();
+
+        return redirect()->route('dashboard')->with('status', 'Laporan berhasil dihapus.');
     }
 
     protected function ensureUserAuthenticated(): ?RedirectResponse
@@ -154,23 +206,43 @@ class LaporanController extends Controller
         return null;
     }
 
-    protected function generateCaptcha(string $key): array
+    protected function authorizeUserOwnership(Laporan $laporan): void
     {
-        $first = random_int(1, 9);
-        $second = random_int(1, 9);
-
-        session(["captcha_{$key}" => $first + $second]);
-
-        return [
-            'question' => "{$first} + {$second} = ?",
-        ];
+        $user = session('user');
+        if (! is_array($user) || ($laporan->pelapor_id !== ($user['id'] ?? null))) {
+            abort(403, 'Anda tidak berhak mengakses laporan ini.');
+        }
     }
 
-    protected function validateCaptcha(string $key, int $answer): bool
+    protected function storeFoto($file): string
     {
-        $expected = session("captcha_{$key}");
-        session()->forget("captcha_{$key}");
+        $directory = 'uploads/laporans';
+        File::ensureDirectoryExists(public_path($directory));
 
-        return $expected !== null && $expected === $answer;
+        $filename = Str::uuid()->toString() . '.' . $file->getClientOriginalExtension();
+        $file->move(public_path($directory), $filename);
+
+        return $directory . '/' . $filename;
+    }
+
+    protected function deleteFoto(?string $path): void
+    {
+        if (! $path) {
+            return;
+        }
+
+        if (Str::startsWith($path, ['http://', 'https://'])) {
+            return;
+        }
+
+        $publicPath = public_path($path);
+        if (File::exists($publicPath)) {
+            File::delete($publicPath);
+            return;
+        }
+
+        if (Storage::disk('public')->exists($path)) {
+            Storage::disk('public')->delete($path);
+        }
     }
 }

@@ -13,11 +13,7 @@ class UserController extends Controller
 {
     public function registerForm()
     {
-        $captcha = $this->generateCaptcha('user_register');
-
-        return view('auth.register', [
-            'captchaQuestion' => $captcha['question'],
-        ]);
+        return view('auth.register');
     }
 
     public function registerProcess(Request $request)
@@ -26,12 +22,7 @@ class UserController extends Controller
             'nama_lengkap' => 'required|string|max:255',
             'email' => 'required|email|max:255|unique:users,email',
             'password' => 'required|string|min:8|confirmed',
-            'captcha_answer' => 'required|numeric',
         ]);
-
-        if (! $this->validateCaptcha('user_register', (int) $request->input('captcha_answer'))) {
-            return back()->withInput()->withErrors(['captcha_answer' => 'Jawaban captcha salah.']);
-        }
 
         try {
             DB::beginTransaction();
@@ -53,27 +44,19 @@ class UserController extends Controller
         }
     }
 
-    /** Menampilkan form login dengan captcha matematika */
+    /** Menampilkan form login pengguna */
     public function loginForm()
     {
-        $captcha = $this->generateCaptcha('user_login');
-        return view('login', [
-            'captchaQuestion' => $captcha['question'],
-        ]);
+        return view('login');
     }
 
-    /** Memproses login dan validasi captcha */
+    /** Memproses login pengguna */
     public function loginProcess(Request $request)
     {
         $request->validate([
             'email' => 'required|email',
             'password' => 'required|string',
-            'captcha_answer' => 'required|numeric',
         ]);
-
-        if (! $this->validateCaptcha('user_login', (int) $request->input('captcha_answer'))) {
-            return back()->withInput()->withErrors(['captcha_answer' => 'Jawaban captcha salah.']);
-        }
 
         $cred = $request->only('email', 'password');
         $user = User::where('email', $cred['email'])->first();
@@ -148,28 +131,6 @@ class UserController extends Controller
         $request->session()->regenerateToken();
 
         return redirect()->route('login.form')->with('status', 'Anda telah keluar.');
-    }
-
-    /** Membuat captcha matematika */
-    protected function generateCaptcha(string $key): array
-    {
-        $first = random_int(1, 9);
-        $second = random_int(1, 9);
-
-        session(["captcha_{$key}" => $first + $second]);
-
-        return [
-            'question' => "{$first} + {$second} = ?",
-        ];
-    }
-
-    /** Memvalidasi jawaban captcha */
-    protected function validateCaptcha(string $key, int $answer): bool
-    {
-        $expected = session("captcha_{$key}");
-        session()->forget("captcha_{$key}");
-
-        return $expected !== null && $expected === $answer;
     }
 
     protected function rememberUser(Request $request, User $user): void

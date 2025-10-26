@@ -13,11 +13,7 @@ class AdminController extends Controller
 {
     public function loginForm(): View
     {
-        $captcha = $this->generateCaptcha('admin_login');
-
-        return view('admin.auth.login', [
-            'captchaQuestion' => $captcha['question'],
-        ]);
+        return view('admin.auth.login');
     }
 
     public function loginProcess(Request $request): RedirectResponse
@@ -25,12 +21,7 @@ class AdminController extends Controller
         $request->validate([
             'email' => ['required', 'email'],
             'password' => ['required', 'string'],
-            'captcha_answer' => ['required', 'numeric'],
         ]);
-
-        if (! $this->validateCaptcha('admin_login', (int) $request->input('captcha_answer'))) {
-            return back()->withInput()->withErrors(['captcha_answer' => 'Jawaban captcha salah.']);
-        }
 
         $admin = Admin::where('email', $request->input('email'))->first();
 
@@ -95,26 +86,6 @@ class AdminController extends Controller
         }
 
         return null;
-    }
-
-    protected function generateCaptcha(string $key): array
-    {
-        $first = random_int(1, 9);
-        $second = random_int(1, 9);
-
-        session(["captcha_{$key}" => $first + $second]);
-
-        return [
-            'question' => "{$first} + {$second} = ?",
-        ];
-    }
-
-    protected function validateCaptcha(string $key, int $answer): bool
-    {
-        $expected = session("captcha_{$key}");
-        session()->forget("captcha_{$key}");
-
-        return $expected !== null && $expected === $answer;
     }
 
     public function logout(Request $request): RedirectResponse

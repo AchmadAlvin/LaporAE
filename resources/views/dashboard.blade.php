@@ -97,7 +97,15 @@
                                     @endif
                                 </td>
                                 <td class="text-end">
-                                    <a href="{{ route('laporan.show', $laporan->id) }}" class="btn btn-outline-primary btn-sm">Detail</a>
+                                    <div class="d-flex justify-content-end gap-2">
+                                        <a href="{{ route('laporan.show', $laporan->id) }}" class="btn btn-outline-primary btn-sm">Detail</a>
+                                        <a href="{{ route('laporan.edit', $laporan->id) }}" class="btn btn-outline-secondary btn-sm">Edit</a>
+                                        <form action="{{ route('laporan.destroy', $laporan->id) }}" method="POST" onsubmit="return confirm('Hapus laporan ini?');">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button type="submit" class="btn btn-danger btn-sm">Hapus</button>
+                                        </form>
+                                    </div>
                                 </td>
                             </tr>
                         @endforeach

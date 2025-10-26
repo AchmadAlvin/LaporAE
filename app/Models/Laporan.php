@@ -4,7 +4,9 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use App\Models\User;
+use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 class Laporan extends Model
 {
@@ -23,5 +25,27 @@ class Laporan extends Model
     public function pelapor()
     {
         return $this->belongsTo(User::class, 'pelapor_id');
+    }
+
+    public function getFotoUrlAttribute(): ?string
+    {
+        $foto = $this->attributes['foto'] ?? null;
+        if (! $foto) {
+            return null;
+        }
+
+        if (Str::startsWith($foto, ['http://', 'https://'])) {
+            return $foto;
+        }
+
+        if (File::exists(public_path($foto))) {
+            return asset($foto);
+        }
+
+        if (Storage::disk('public')->exists($foto)) {
+            return Storage::disk('public')->url($foto);
+        }
+
+        return null;
     }
 }

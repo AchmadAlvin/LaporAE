@@ -13,7 +13,10 @@
 
     <p>Halo, {{ $admin['nama'] ?? 'Admin' }}.</p>
 
-    <p><a href="{{ route('logout') }}">Logout</a></p>
+    <form method="POST" action="{{ route('admin.logout') }}">
+        @csrf
+        <button type="submit">Logout</button>
+    </form>
 
     <h2>Daftar Semua Laporan</h2>
 

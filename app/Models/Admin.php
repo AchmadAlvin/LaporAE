@@ -12,11 +12,13 @@ class Admin extends Model
     protected $table = 'admins';
 
     protected $fillable = [
-        'user_id',
-        'name',
+        'nama',
         'email',
         'password',
-        // tambahkan kolom lain jika tabel admins Anda punya kolom tambahan
+    ];
+
+    protected $hidden = [
+        'password',
     ];
 
     public $timestamps = true;

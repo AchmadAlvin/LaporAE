@@ -60,6 +60,12 @@
 
     <div class="card-footer bg-white border-0 d-flex flex-wrap gap-2">
         <a href="{{ route('dashboard') }}" class="btn btn-outline-secondary">Kembali ke Dashboard</a>
+        <a href="{{ route('laporan.edit', $laporan->id) }}" class="btn btn-outline-primary">Edit Laporan</a>
+        <form action="{{ route('laporan.destroy', $laporan->id) }}" method="POST" onsubmit="return confirm('Hapus laporan ini?');">
+            @csrf
+            @method('DELETE')
+            <button type="submit" class="btn btn-danger">Hapus Laporan</button>
+        </form>
         <a href="{{ route('lapor.create') }}" class="btn btn-primary">Buat Laporan Baru</a>
     </div>
 </div>
