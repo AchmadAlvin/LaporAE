@@ -3,113 +3,126 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
-use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\View\View;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class UserController extends Controller
 {
-    public function registerForm(): View
+    public function registerForm()
     {
-        $captcha = $this->generateCaptcha('user_register');
-
-        return view('auth.register', [
-            'captchaQuestion' => $captcha['question'],
-        ]);
+        return view('auth.register');
     }
 
-    public function registerProcess(Request $request): RedirectResponse
+    public function registerProcess(Request $request)
     {
-        $request->validate([
-            'nama_lengkap' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'email', 'max:255', 'unique:users,email'],
-            'password' => ['required', 'string', 'min:8', 'confirmed'],
-            'captcha_answer' => ['required', 'numeric'],
+        $data = $request->validate([
+            'nama_lengkap' => 'required|string|max:255',
+            'email' => 'required|email|max:255|unique:users,email',
+            'password' => 'required|string|min:8|confirmed',
         ]);
 
-        if (! $this->validateCaptcha('user_register', (int) $request->input('captcha_answer'))) {
-            return back()->withInput()->withErrors(['captcha_answer' => 'Jawaban captcha salah.']);
+        try {
+            DB::beginTransaction();
+
+            $user = User::create([
+                'nama_lengkap' => $data['nama_lengkap'],
+                'email' => $data['email'],
+                'password' => Hash::make($data['password']),
+            ]);
+
+            DB::commit();
+            session(['user' => $user->id]);
+
+            return redirect()->route('dashboard');
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            Log::error('Register failed: ' . $e->getMessage());
+            return back()->withInput()->withErrors(['register' => 'Gagal membuat akun.']);
         }
-
-        $user = User::create([
-            'nama_lengkap' => $request->input('nama_lengkap'),
-            'email' => $request->input('email'),
-            'password' => Hash::make($request->input('password')),
-        ]);
-
-        session(['user' => [
-            'id' => $user->id,
-            'nama_lengkap' => $user->nama_lengkap,
-            'email' => $user->email,
-        ]]);
-
-        return redirect()->route('dashboard')->with('status', 'Registrasi berhasil.');
     }
 
-    public function loginForm(): View
+    /** Menampilkan form login dengan captcha matematika */
+    public function loginForm()
     {
         $captcha = $this->generateCaptcha('user_login');
-
-        return view('auth.login', [
+        return view('login', [
             'captchaQuestion' => $captcha['question'],
         ]);
     }
 
-    public function loginProcess(Request $request): RedirectResponse
+    /** Memproses login dan validasi captcha */
+    public function loginProcess(Request $request)
     {
         $request->validate([
-            'email' => ['required', 'email'],
-            'password' => ['required', 'string'],
-            'captcha_answer' => ['required', 'numeric'],
+            'email' => 'required|email',
+            'password' => 'required|string',
+            'captcha_answer' => 'required|numeric',
         ]);
 
         if (! $this->validateCaptcha('user_login', (int) $request->input('captcha_answer'))) {
             return back()->withInput()->withErrors(['captcha_answer' => 'Jawaban captcha salah.']);
         }
 
-        $user = User::where('email', $request->input('email'))->first();
+        $cred = $request->only('email', 'password');
+        $user = User::where('email', $cred['email'])->first();
 
-        if (! $user || ! Hash::check($request->input('password'), $user->password)) {
-            return back()->withInput()->withErrors(['email' => 'Kredensial tidak valid.']);
+        if (! $user) {
+            return back()->withErrors(['email' => 'Email atau password salah'])->withInput();
         }
 
-        session(['user' => [
-            'id' => $user->id,
-            'nama_lengkap' => $user->nama_lengkap,
-            'email' => $user->email,
-        ]]);
+        $stored = $user->password;
+        $passwordOk = false;
 
-        session()->forget('admin');
-
-        return redirect()->route('dashboard')->with('status', 'Login berhasil.');
-    }
-
-    public function dashboard(): View|RedirectResponse
-    {
-        if ($redirect = $this->ensureUserAuthenticated()) {
-            return $redirect;
+        try {
+            $passwordOk = Hash::check($cred['password'], $stored);
+        } catch (\RuntimeException $e) {
+            $plain = $cred['password'];
+            if (!$passwordOk && is_string($stored) && strlen($stored) === 32 && md5($plain) === $stored) { $passwordOk = true; }
+            if (!$passwordOk && is_string($stored) && strlen($stored) === 40 && sha1($plain) === $stored) { $passwordOk = true; }
+            if (!$passwordOk && $plain === $stored) { $passwordOk = true; }
         }
 
-        return app(LaporanController::class)->index();
-    }
-
-    public function logout(): RedirectResponse
-    {
-        session()->forget(['user', 'admin']);
-
-        return redirect()->route('login.form')->with('status', 'Anda telah logout.');
-    }
-
-    protected function ensureUserAuthenticated(): ?RedirectResponse
-    {
-        if (! session()->has('user')) {
-            return redirect()->route('login.form')->with('error', 'Silakan login terlebih dahulu.');
+        if (! $passwordOk) {
+            return back()->withErrors(['email' => 'Email atau password salah'])->withInput();
         }
 
-        return null;
+        try {
+            if (Hash::needsRehash($stored) || !is_string($stored) || strpos($stored, '$2y$') !== 0) {
+                $user->password = Hash::make($cred['password']);
+                $user->save();
+            }
+        } catch (\Throwable $e) {
+            // abaikan error rehash
+        }
+
+        session(['user' => $user->id]);
+        return redirect()->intended(route('dashboard'));
     }
 
+    public function dashboard()
+    {
+        $user = null;
+        if (session()->has('user')) {
+            $user = User::find(session('user'));
+        }
+
+        $laporans = collect();
+        if ($user) {
+            $laporans = DB::table('laporans')->orderBy('created_at', 'desc')->get();
+        }
+
+        return view('dashboard', ['user' => $user, 'laporans' => $laporans]);
+    }
+
+    public function logout()
+    {
+        session()->forget('user');
+        return redirect()->route('login.form');
+    }
+
+    /** Membuat captcha matematika */
     protected function generateCaptcha(string $key): array
     {
         $first = random_int(1, 9);
@@ -122,6 +135,7 @@ class UserController extends Controller
         ];
     }
 
+    /** Memvalidasi jawaban captcha */
     protected function validateCaptcha(string $key, int $answer): bool
     {
         $expected = session("captcha_{$key}");
