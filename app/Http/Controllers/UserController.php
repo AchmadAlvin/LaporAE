@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Laporan;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -12,7 +13,11 @@ class UserController extends Controller
 {
     public function registerForm()
     {
-        return view('auth.register');
+        $captcha = $this->generateCaptcha('user_register');
+
+        return view('auth.register', [
+            'captchaQuestion' => $captcha['question'],
+        ]);
     }
 
     public function registerProcess(Request $request)
@@ -21,7 +26,12 @@ class UserController extends Controller
             'nama_lengkap' => 'required|string|max:255',
             'email' => 'required|email|max:255|unique:users,email',
             'password' => 'required|string|min:8|confirmed',
+            'captcha_answer' => 'required|numeric',
         ]);
+
+        if (! $this->validateCaptcha('user_register', (int) $request->input('captcha_answer'))) {
+            return back()->withInput()->withErrors(['captcha_answer' => 'Jawaban captcha salah.']);
+        }
 
         try {
             DB::beginTransaction();
@@ -33,7 +43,7 @@ class UserController extends Controller
             ]);
 
             DB::commit();
-            session(['user' => $user->id]);
+            $this->rememberUser($request, $user);
 
             return redirect()->route('dashboard');
         } catch (\Throwable $e) {
@@ -97,29 +107,47 @@ class UserController extends Controller
             // abaikan error rehash
         }
 
-        session(['user' => $user->id]);
+        $this->rememberUser($request, $user);
         return redirect()->intended(route('dashboard'));
     }
 
-    public function dashboard()
+    public function dashboard(Request $request)
     {
-        $user = null;
-        if (session()->has('user')) {
-            $user = User::find(session('user'));
+        if (! session()->has('user')) {
+            return redirect()->route('login.form')->with('error', 'Silakan login terlebih dahulu.');
         }
 
-        $laporans = collect();
-        if ($user) {
-            $laporans = DB::table('laporans')->orderBy('created_at', 'desc')->get();
+        $user = $this->currentUser();
+        if (! $user) {
+            $request->session()->forget('user');
+            return redirect()->route('login.form')->with('error', 'Session tidak valid. Silakan login ulang.');
         }
 
-        return view('dashboard', ['user' => $user, 'laporans' => $laporans]);
+        $laporans = Laporan::with('pelapor')
+            ->where('pelapor_id', $user->id)
+            ->latest()
+            ->get();
+
+        $statusCounts = [
+            'Baru Masuk' => $laporans->where('status', 'Baru Masuk')->count(),
+            'Sedang Diverifikasi' => $laporans->where('status', 'Sedang Diverifikasi')->count(),
+            'Selesai Ditindaklanjuti' => $laporans->where('status', 'Selesai Ditindaklanjuti')->count(),
+        ];
+
+        return view('dashboard', [
+            'user' => $user,
+            'laporans' => $laporans,
+            'statusCounts' => $statusCounts,
+        ]);
     }
 
-    public function logout()
+    public function logout(Request $request)
     {
-        session()->forget('user');
-        return redirect()->route('login.form');
+        $request->session()->forget('user');
+        $request->session()->invalidate();
+        $request->session()->regenerateToken();
+
+        return redirect()->route('login.form')->with('status', 'Anda telah keluar.');
     }
 
     /** Membuat captcha matematika */
@@ -142,5 +170,27 @@ class UserController extends Controller
         session()->forget("captcha_{$key}");
 
         return $expected !== null && $expected === $answer;
+    }
+
+    protected function rememberUser(Request $request, User $user): void
+    {
+        $request->session()->regenerate();
+        session([
+            'user' => [
+                'id' => $user->id,
+                'nama' => $user->nama_lengkap,
+                'email' => $user->email,
+            ],
+        ]);
+    }
+
+    protected function currentUser(): ?User
+    {
+        $session = session('user');
+        if (! is_array($session) || ! isset($session['id'])) {
+            return null;
+        }
+
+        return User::find($session['id']);
     }
 }

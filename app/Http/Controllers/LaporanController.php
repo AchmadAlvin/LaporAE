@@ -9,15 +9,13 @@ use Illuminate\View\View;
 
 class LaporanController extends Controller
 {
-    public function index(): View
+    public function index(): RedirectResponse
     {
-        $laporans = Laporan::latest()->get();
+        if (session()->has('admin')) {
+            return redirect()->route('admin.dashboard');
+        }
 
-        return view('laporan.index', [
-            'laporans' => $laporans,
-            'user' => session('user'),
-            'admin' => session('admin'),
-        ]);
+        return redirect()->route('dashboard');
     }
 
     public function create(): View|RedirectResponse
@@ -28,6 +26,7 @@ class LaporanController extends Controller
 
         return view('laporan.create', [
             'user' => session('user'),
+            'captchaQuestion' => $this->generateCaptcha('laporan_create')['question'],
         ]);
     }
 
@@ -42,22 +41,49 @@ class LaporanController extends Controller
             'deskripsi' => ['required', 'string'],
             'kategori' => ['required', 'string', 'max:255'],
             'lokasi' => ['required', 'string', 'max:255'],
-            'foto' => ['required', 'string', 'max:255'],
+            'foto' => ['required', 'image', 'max:2048'],
+            'captcha_answer' => ['required', 'numeric'],
         ]);
 
+        if (! $this->validateCaptcha('laporan_create', (int) $request->input('captcha_answer'))) {
+            return back()
+                ->withInput()
+                ->withErrors(['captcha_answer' => 'Jawaban captcha tidak sesuai.']);
+        }
+
         $user = session('user');
+
+        $fotoPath = $request->file('foto')->store('laporans', 'public');
 
         Laporan::create([
             'judul' => $validated['judul'],
             'deskripsi' => $validated['deskripsi'],
             'kategori' => $validated['kategori'],
             'lokasi' => $validated['lokasi'],
-            'foto' => $validated['foto'],
+            'foto' => $fotoPath,
             'status' => 'Baru Masuk',
-            'pelapor_id' => $user['id'],
+            'pelapor_id' => $user['id'] ?? null,
         ]);
 
         return redirect()->route('dashboard')->with('status', 'Laporan berhasil dikirim.');
+    }
+
+    public function show(int $id): View|RedirectResponse
+    {
+        if ($redirect = $this->ensureUserAuthenticated()) {
+            return $redirect;
+        }
+
+        $laporan = Laporan::with('pelapor')->findOrFail($id);
+
+        $user = session('user');
+        if (! is_array($user) || ($laporan->pelapor_id !== ($user['id'] ?? null))) {
+            abort(403, 'Anda tidak memiliki akses ke laporan ini.');
+        }
+
+        return view('laporan.show', [
+            'laporan' => $laporan,
+        ]);
     }
 
     public function edit(int $id): View|RedirectResponse
@@ -110,6 +136,12 @@ class LaporanController extends Controller
             return redirect()->route('login.form')->with('error', 'Silakan login sebagai pengguna.');
         }
 
+        $user = session('user');
+        if (! is_array($user) || ! isset($user['id'])) {
+            session()->forget('user');
+            return redirect()->route('login.form')->with('error', 'Session pengguna tidak valid.');
+        }
+
         return null;
     }
 
@@ -120,5 +152,25 @@ class LaporanController extends Controller
         }
 
         return null;
+    }
+
+    protected function generateCaptcha(string $key): array
+    {
+        $first = random_int(1, 9);
+        $second = random_int(1, 9);
+
+        session(["captcha_{$key}" => $first + $second]);
+
+        return [
+            'question' => "{$first} + {$second} = ?",
+        ];
+    }
+
+    protected function validateCaptcha(string $key, int $answer): bool
+    {
+        $expected = session("captcha_{$key}");
+        session()->forget("captcha_{$key}");
+
+        return $expected !== null && $expected === $answer;
     }
 }

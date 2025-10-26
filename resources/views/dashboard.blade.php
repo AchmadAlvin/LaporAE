@@ -1,97 +1,110 @@
-<!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>Dashboard - {{ env('APP_NAME','LaporAE') }}</title>
+@extends('layouts.app')
 
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-  <link href="{{ asset('css/app.css') }}" rel="stylesheet">
-</head>
-<body>
+@section('title', 'Dashboard - ' . config('app.name', 'LaporAE'))
 
-  <div class="container py-4">
-    @php
-      $user = $user ?? null;
-      $laporans = $laporans ?? collect();
-      $userId = $user->id ?? null;
-      $laporanPengguna = collect($laporans)->where('pelapor_id', $userId);
-      $total = $laporanPengguna->count();
-      $open = $laporanPengguna->where('status','open')->count();
-      $closed = $laporanPengguna->where('status','closed')->count();
+@section('content')
+@php
+    $displayName = $user->nama_lengkap ?? $user->email ?? 'Pengguna';
+    $statusCounts = $statusCounts ?? [
+        'Baru Masuk' => 0,
+        'Sedang Diverifikasi' => 0,
+        'Selesai Ditindaklanjuti' => 0,
+    ];
+@endphp
 
-      // prefer user name, fallback to email, then 'Pengguna'
-      $displayName = $user->name ?? $user->email ?? 'Pengguna';
-    @endphp
-
-    <div class="topbar mb-3">
-      <div>
-        <h3 style="margin:0">Dashboard Pengguna</h3>
-        <div class="text-muted" style="font-size:13px">Selamat datang, {{ $displayName }}.</div>
-      </div>
-
-      <div style="display:flex;gap:8px;align-items:center">
-        <a href="{{ url('/laporans/create') }}" class="btn btn-primary btn-sm">Tambah Laporan</a>
-        <a href="{{ route('logout') }}" class="btn btn-outline-secondary btn-sm">Logout</a>
-      </div>
+<div class="d-flex flex-wrap align-items-start justify-content-between gap-3 mb-4">
+    <div>
+        <h1 class="h3 mb-1">Dashboard Pengguna</h1>
+        <p class="text-muted mb-0">Selamat datang, {{ $displayName }}. Pantau status laporan Anda di sini.</p>
     </div>
+    <a href="{{ route('lapor.create') }}" class="btn btn-primary align-self-center">Buat Laporan</a>
+</div>
 
-    <div class="card-stats mb-4">
-      <div class="stat">
-        <div class="label">Total laporan</div>
-        <div class="value">{{ $total }}</div>
-      </div>
-      <div class="stat">
-        <div class="label">Open</div>
-        <div class="value text-primary">{{ $open }}</div>
-      </div>
-      <div class="stat">
-        <div class="label">Closed</div>
-        <div class="value text-muted">{{ $closed }}</div>
-      </div>
-    </div>
-
-    <h5 class="mb-3">Daftar Laporan Saya</h5>
-
-    <div class="table-wrap">
-      @if ($laporanPengguna->isEmpty())
-        <p class="text-muted mb-0">Belum ada laporan.</p>
-      @else
-        <div class="table-responsive">
-          <table class="table mb-0">
-            <thead>
-              <tr>
-                <th>Judul</th>
-                <th>Kategori</th>
-                <th>Status</th>
-                <th>Dibuat</th>
-                <th class="text-end">Aksi</th>
-              </tr>
-            </thead>
-            <tbody>
-              @foreach ($laporanPengguna as $lap)
-                <tr>
-                  <td>{{ $lap->judul ?? ($lap->title ?? '-') }}</td>
-                  <td>{{ $lap->kategori ?? ($lap->category ?? '-') }}</td>
-                  @php $s = strtolower($lap->status ?? ''); @endphp
-                  <td>
-                    <span class="badge-status {{ $s === 'open' ? 'badge-open' : ($s === 'closed' ? 'badge-closed' : 'badge-pending') }}">
-                      {{ ucfirst($lap->status ?? '-') }}
-                    </span>
-                  </td>
-                  <td>{{ isset($lap->created_at) ? \Illuminate\Support\Carbon::parse($lap->created_at)->format('d M Y H:i') : '-' }}</td>
-                  <td class="text-end">
-                    <a href="{{ url('/laporans/'.$lap->id) }}" class="btn btn-sm btn-outline-primary">Detail</a>
-                  </td>
-                </tr>
-              @endforeach
-            </tbody>
-          </table>
+<div class="row g-3 mb-4">
+    <div class="col-md-4">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body">
+                <p class="text-uppercase text-muted small mb-1">Baru Masuk</p>
+                <h2 class="fw-semibold mb-2">{{ $statusCounts['Baru Masuk'] }}</h2>
+                <span class="badge bg-primary-subtle text-primary">Menunggu verifikasi</span>
+            </div>
         </div>
-      @endif
     </div>
-  </div>
+    <div class="col-md-4">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body">
+                <p class="text-uppercase text-muted small mb-1">Sedang Diverifikasi</p>
+                <h2 class="fw-semibold mb-2">{{ $statusCounts['Sedang Diverifikasi'] }}</h2>
+                <span class="badge bg-warning-subtle text-warning-emphasis">Diproses petugas</span>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body">
+                <p class="text-uppercase text-muted small mb-1">Selesai Ditindaklanjuti</p>
+                <h2 class="fw-semibold mb-2">{{ $statusCounts['Selesai Ditindaklanjuti'] }}</h2>
+                <span class="badge bg-success-subtle text-success-emphasis">Tindak lanjut selesai</span>
+            </div>
+        </div>
+    </div>
+</div>
 
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-</body>
-</html>
+<div class="card border-0 shadow-sm">
+    <div class="card-header bg-white border-0">
+        <h5 class="mb-1">Daftar Laporan Saya</h5>
+        <p class="text-muted mb-0">Semua laporan ditampilkan dari terbaru.</p>
+    </div>
+    <div class="card-body">
+        @if ($laporans->isEmpty())
+            <p class="text-muted mb-0">Belum ada laporan. Yuk buat laporan pertama Anda!</p>
+        @else
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Judul</th>
+                            <th>Kategori</th>
+                            <th>Status</th>
+                            <th>Dibuat</th>
+                            <th>Dokumentasi</th>
+                            <th class="text-end">Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach ($laporans as $laporan)
+                            @php
+                                $badgeClass = match ($laporan->status) {
+                                    'Baru Masuk' => 'bg-primary-subtle text-primary',
+                                    'Sedang Diverifikasi' => 'bg-warning-subtle text-warning-emphasis',
+                                    'Selesai Ditindaklanjuti' => 'bg-success-subtle text-success-emphasis',
+                                    default => 'bg-secondary-subtle text-secondary-emphasis',
+                                };
+                                $fotoUrl = $laporan->foto_url;
+                            @endphp
+                            <tr>
+                                <td>{{ $laporan->judul }}</td>
+                                <td>{{ $laporan->kategori }}</td>
+                                <td>
+                                    <span class="badge rounded-pill {{ $badgeClass }}">{{ $laporan->status }}</span>
+                                </td>
+                                <td>{{ $laporan->created_at?->format('d M Y H:i') }}</td>
+                                <td>
+                                    @if ($fotoUrl)
+                                        <a href="{{ $fotoUrl }}" target="_blank" class="link-primary text-decoration-none">Lihat Foto</a>
+                                    @else
+                                        <span class="text-muted">-</span>
+                                    @endif
+                                </td>
+                                <td class="text-end">
+                                    <a href="{{ route('laporan.show', $laporan->id) }}" class="btn btn-outline-primary btn-sm">Detail</a>
+                                </td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+        @endif
+    </div>
+</div>
+@endsection

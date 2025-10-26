@@ -38,6 +38,8 @@ class AdminController extends Controller
             return back()->withInput()->withErrors(['email' => 'Kredensial tidak valid.']);
         }
 
+        $request->session()->regenerate();
+
         session(['admin' => [
             'id' => $admin->id,
             'nama' => $admin->nama,
@@ -114,10 +116,13 @@ class AdminController extends Controller
 
         return $expected !== null && $expected === $answer;
     }
-    public function logout(): RedirectResponse // Tambahkan fungsi ini
+
+    public function logout(Request $request): RedirectResponse
     {
-        session()->forget('admin'); // Hapus data sesi admin
-        session()->flash('status', 'Logout admin berhasil.'); // Pesan opsional
-        return redirect()->route('admin.login.form'); // Redirect ke halaman login admin
+        $request->session()->forget('admin');
+        $request->session()->invalidate();
+        $request->session()->regenerateToken();
+
+        return redirect()->route('admin.login.form')->with('status', 'Logout admin berhasil.');
     }
 }
