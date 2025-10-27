@@ -12,6 +12,12 @@ class Laporan extends Model
 {
     use HasFactory;
 
+    public const KATEGORI_OPTIONS = [
+        'Keamanan',
+        'Aksesibilitas',
+        'Fasilitas Rusak',
+    ];
+
     protected $fillable = [
         'judul',
         'deskripsi',

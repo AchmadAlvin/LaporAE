@@ -8,6 +8,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 class LaporanController extends Controller
@@ -41,7 +42,7 @@ class LaporanController extends Controller
         $validated = $request->validate([
             'judul' => ['required', 'string', 'max:255'],
             'deskripsi' => ['required', 'string'],
-            'kategori' => ['required', 'string', 'max:255'],
+            'kategori' => ['required', Rule::in(Laporan::KATEGORI_OPTIONS)],
             'lokasi' => ['required', 'string', 'max:255'],
             'foto' => ['required', 'image', 'max:2048'],
         ]);
@@ -152,7 +153,7 @@ class LaporanController extends Controller
         $validated = $request->validate([
             'judul' => ['required', 'string', 'max:255'],
             'deskripsi' => ['required', 'string'],
-            'kategori' => ['required', 'string', 'max:255'],
+            'kategori' => ['required', Rule::in(Laporan::KATEGORI_OPTIONS)],
             'lokasi' => ['required', 'string', 'max:255'],
             'foto' => ['nullable', 'image', 'max:2048'],
         ]);

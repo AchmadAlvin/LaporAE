@@ -15,7 +15,7 @@ return new class extends Migration
             $table->id();
             $table->string('judul');
             $table->text('deskripsi');
-            $table->string('kategori');
+            $table->enum('kategori', ['Keamanan', 'Aksesibilitas', 'Fasilitas Rusak']);
             $table->string('lokasi');
             $table->string('foto');
             $table->enum('status', ['Baru Masuk', 'Sedang Diverifikasi', 'Selesai Ditindaklanjuti'])->default('Baru Masuk');

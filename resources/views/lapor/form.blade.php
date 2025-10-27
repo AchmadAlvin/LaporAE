@@ -1,7 +1,7 @@
 @php
     $isEdit = isset($laporan);
     $action = $isEdit ? route('laporan.update', $laporan->id) : route('lapor.store');
-    $kategoriOptions = ['Keamanan', 'Aksesibilitas', 'Fasilitas Rusak'];
+    $kategoriOptions = \App\Models\Laporan::KATEGORI_OPTIONS;
 @endphp
 
 <form method="POST" action="{{ $action }}" enctype="multipart/form-data" class="row g-3">
