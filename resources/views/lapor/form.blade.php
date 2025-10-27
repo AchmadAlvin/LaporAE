@@ -1,6 +1,7 @@
 @php
     $isEdit = isset($laporan);
     $action = $isEdit ? route('laporan.update', $laporan->id) : route('lapor.store');
+    $kategoriOptions = ['Keamanan', 'Aksesibilitas', 'Fasilitas Rusak'];
 @endphp
 
 <form method="POST" action="{{ $action }}" enctype="multipart/form-data" class="row g-3">
@@ -27,7 +28,14 @@
 
     <div class="col-md-6">
         <label for="kategori" class="form-label">Kategori</label>
-        <input id="kategori" name="kategori" type="text" value="{{ old('kategori', $laporan->kategori ?? '') }}" class="form-control @error('kategori') is-invalid @enderror" required>
+        <select id="kategori" name="kategori" class="form-select @error('kategori') is-invalid @enderror" required>
+            <option value="" disabled {{ old('kategori', $laporan->kategori ?? '') ? '' : 'selected' }}>Pilih kategori</option>
+            @foreach ($kategoriOptions as $kategori)
+                <option value="{{ $kategori }}" {{ old('kategori', $laporan->kategori ?? '') === $kategori ? 'selected' : '' }}>
+                    {{ $kategori }}
+                </option>
+            @endforeach
+        </select>
         @error('kategori')
             <div class="invalid-feedback">{{ $message }}</div>
         @enderror
