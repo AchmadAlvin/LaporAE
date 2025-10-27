@@ -19,7 +19,7 @@ class LaporanSeeder extends Seeder
             'deskripsi' => 'Trotoar di depan stasiun rusak parah, sulit dilewati pejalan kaki dan berbahaya bagi pengguna kursi roda.',
             'kategori' => 'Fasilitas Rusak',
             'lokasi' => 'Depan Stasiun Madiun, Jl Pahlawan',
-            'foto' => 'laporan1.jpg',
+            'foto' => 'storage/laporans/laporan1.jpg',
             'status' => 'Baru Masuk',
         ]);
         Laporan::create([
@@ -28,7 +28,7 @@ class LaporanSeeder extends Seeder
             'deskripsi' => 'Halte Bus di Pasar Besar tidak ada jalan landai (ramp) untuk naik turun kursi roda, sangat menyulitkan.',
             'kategori' => 'Aksesibilitas',
             'lokasi' => 'Halte Pasar Besar, Jl Sudirman',
-            'foto' => 'laporan2.jpg',
+            'foto' => 'storage/laporans/laporan2.jpg',
             'status' => 'Sedang Diverifikasi',
         ]);
         Laporan::create([
@@ -37,7 +37,7 @@ class LaporanSeeder extends Seeder
             'deskripsi' => 'Lampu jalan di sekitar Terminal Purboyo banyak yang mati, membuat suasana menjadi gelap dan rawan di malam hari.',
             'kategori' => 'Keamanan',
             'lokasi' => 'Sekitar Terminal Purboyo',
-            'foto' => 'laporan3.jpg',
+            'foto' => 'storage/laporans/laporan3.jpg',
             'status' => 'Selesai Ditindaklanjuti'
         ]);
     }
